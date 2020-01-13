@@ -1,0 +1,163 @@
+---
+title: "Assignment 3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+##Code Setup
+install.packages('tidyverse')
+install.packages('ggplot2')
+install.packages('GGally')
+
+library(tidyverse)
+library(ggplot2)
+library(GGally)
+
+UncleanRealEstDataWW <- read.csv(paste0("MLR-reale_data.csv"))
+
+
+##Data Cleaning, Rows 1,11 and 97 removed
+CleanedRealEstDataWW <- na.omit(UncleanRealEstDataWW)
+NewCleanedRealEstDataWW <- data.frame(CleanedRealEstDataWW)
+##Adds new column called lotsize
+NewCleanedRealEstDataWW$lotsize <- NewCleanedRealEstDataWW$lotwidth*NewCleanedRealEstDataWW$lotlength
+
+Case_ID <- NewCleanedRealEstDataWW$Case_ID
+Sale <- NewCleanedRealEstDataWW$Sale
+list <- NewCleanedRealEstDataWW$list
+bedrooms <- NewCleanedRealEstDataWW$bedrooms
+bathrooms <- NewCleanedRealEstDataWW$bathrooms
+lotwidth <- NewCleanedRealEstDataWW$lotwidth
+lotlength <- NewCleanedRealEstDataWW$lotlength
+maxsqfoot <- NewCleanedRealEstDataWW$maxsqfoot
+taxes <- NewCleanedRealEstDataWW$taxes
+location <- NewCleanedRealEstDataWW$location
+lotsize<- NewCleanedRealEstDataWW$lotsize
+
+
+##Scatterplot matrix containing ALL possible pairs, we only want the top row, where Sale is response variable
+pairs(NewCleanedRealEstDataWW[c(2:9,11)], main = "Scatterplot Matrix for All Real Estate Data, 8818")
+
+##First 4 plots of top row of scatterplot matrix for clarity
+response_var <- "Sale"
+pair1WW <- ggpairs(NewCleanedRealEstDataWW, columns = c(2:6,1),mapping = aes(y=Sale), lower= list(continuous="smooth"))
+pvar_pos1WW <- match(response_var, pair1WW$xAxisLabels)
+plots1WW <- lapply(1:pair1WW$ncol, function(j) getPlot(pair1WW, i = 6, j = j))
+ggmatrix(plots1WW[c(2:5)],nrow = 1, ncol = 4, xAxisLabels = pair1WW$xAxisLabels[2:5], yAxisLabels = response_var, title = "First 4 Plots of Top Row in Scatterplot Matrix, 8818")
+
+##Last 4 plots of top row of scatterplot matrix for clarity
+pair2WW <- ggpairs(NewCleanedRealEstDataWW, columns = c(2:9,11,1),mapping = aes(y=Sale), lower= list(continuous="smooth"))
+pvar_pos2WW <- match(response_var, pair2WW$xAxisLabels)
+plots2WW <- lapply(1:pair2WW$ncol, function(j) getPlot(pair2WW, i = 10, j = j))
+ggmatrix(plots2WW[c(6:9)],nrow = 1, ncol = 4, xAxisLabels = pair2WW$xAxisLabels[6:9], yAxisLabels = response_var, title = "Last 4 Plots of Top Row in Scatterplot Matrix, 8818")
+
+##Returns all correlation coefficients for data
+cor(NewCleanedRealEstDataWW[c(3:9,11)],y=NewCleanedRealEstDataWW$Sale)
+
+##Multiple Linear Regression
+MLR9ExpVarWW <- lm(Sale ~ list + bedrooms + bathrooms + lotwidth + lotlength + maxsqfoot + taxes + location + lotsize)
+summary(MLR9ExpVarWW)
+
+
+par(mfrow=c(2,2)) 
+plot(MLR9ExpVarWW, main = "Diagnostic Plots for MLR, 8818", caption = list("Residuals vs Fitted, 8818", "Normal Q-Q, 8818", "Scale-Location, Standardized Residual Plot, 8818", "Cook's distance, 8818", "Residuals vs Leverage, 8818"))
+par(mfrow=c(1,1))
+
+round(sort(cooks.distance(MLR9ExpVarWW),decreasing = TRUE)[1:10],5)
+
+plot(x=Case_ID, y = cooks.distance(MLR9ExpVarWW), ylab = "Cook's Distance", main= "Case_ID vs. Cook's Distance Plot, 8818")
+abline(h=4/160)
+
+plot(lm(Sale~lotlength), main = "Diagnostic Plots for Sale vs. lotlength, 8818", caption = list("Residuals vs Fitted, 8818", "Normal Q-Q, 8818", "Scale-Location, Standardized Residual Plot, 8818", "Cook's distance, 8818", "Residuals vs Leverage, 8818"))
+
+
+## Returns same cases no matter the threshold we used, so likely those cases are influential. 
+## 4/n threshold
+NewCleanedRealEstDataWW[cooks.distance(MLR9ExpVarWW)>(4/162),]
+## 4/(n-2) threshold
+NewCleanedRealEstDataWW[cooks.distance(MLR9ExpVarWW)>(4/160),]
+## 4/(n-k-1) threshold, where k = number of predictors
+NewCleanedRealEstDataWW[cooks.distance(MLR9ExpVarWW)>(4/152),]
+
+## Influential points, found Case_IDs: 8,13,20,22,27,41,48,53,55,64,99,112, and 158 as influential in some way
+NewCleanedRealEstDataWW[hatvalues(MLR9ExpVarWW)>(20/162),]
+round(sort(hatvalues(MLR9ExpVarWW),decreasing = TRUE)[1:13],5)
+
+## Outliers, threshold 2
+NewCleanedRealEstDataWW[abs(rstandard(MLR9ExpVarWW))>2,]
+## Outliers, threshold 4
+NewCleanedRealEstDataWW[abs(rstandard(MLR9ExpVarWW))>4,]
+
+
+step(MLR9ExpVarWW, direction = "backward")
+step(MLR9ExpVarWW, direction = "backward",k=log(162))
+
+
+
+install.packages('car')
+library(car)
+summary(powerTransform(cbind(list,bedrooms,bathrooms,lotwidth,lotlength,maxsqfoot,taxes,location,lotsize)))
+
+bcPower Transformations to Multinormality 
+          Est Power Rounded Pwr Wald Lwr Bnd Wald Upr Bnd
+list         0.5769        0.58          NaN          NaN
+bedrooms     0.7601        0.76          NaN          NaN
+bathrooms    0.8455        0.85       0.8248       0.8662
+lotwidth     0.0000        0.00      -0.0001       0.0001
+lotlength    0.0000        0.00      -0.0001       0.0001
+maxsqfoot    0.0814        0.08          NaN          NaN
+taxes       -0.4338       -0.43          NaN          NaN
+location    -1.0786       -1.00      -1.8589      -0.2983
+lotsize      0.0000        0.00      -0.0001       0.0001
+
+Likelihood ratio test that transformation parameters are equal to 0
+ (all log transformations)
+                                      LRT df pval
+LR test, lambda = (0 0 0 0 0 0 0 0 0) NaN  9   NA
+
+Likelihood ratio test that no transformations are needed
+                                           LRT df       pval
+LR test, lambda = (1 1 1 1 1 1 1 1 1) 4355.211  9 < 2.22e-16
+
+
+par(mfrow=c(2,2)) 
+## Diagnostic plots for lotlength
+plot(lm(Sale~lotlength), main = "Diagnostic Plots lotlength, 8818", caption = 
+list("Residuals vs Fitted, 8818", "Normal Q-Q, 8818", "Scale-Location, 8818",
+"Cook's distance, 8818", "Residuals vs Leverage, 8818"))
+
+## Diagnostic plots for lotwidth
+plot(lm(Sale~lotwidth), main = "Diagnostic Plots lotwidth, 8818", caption = 
+list("Residuals vs Fitted, 8818", "Normal Q-Q, 8818", "Scale-Location, 8818",
+"Cook's distance, 8818", "Residuals vs Leverage, 8818"))
+
+## Diagnostic plots for lotsize
+plot(lm(Sale~lotsize), main = "Diagnostic Plots lotsize, 8818", caption = 
+list("Residuals vs Fitted, 8818", "Normal Q-Q, 8818", "Scale-Location, 8818",
+"Cook's distance, 8818", "Residuals vs Leverage, 8818"))
+par(mfrow=c(1,1)) 
+
+
+SalelengthlmWW <- lm(Sale~lotlength)
+wtsofSLRWW <- 1/(lm(abs(SalelengthlmWW$residuals) ~ SalelengthlmWW$fitted.values)$fitted.values)^2
+WeightedRegWW <- lm(Sale~lotlength, weights = wtsofSLRWW )
+summary(WeightedRegWW)
+
+## 2X2 of plots
+par(mfrow=c(2,2))
+plot(WeightedRegWW, main = "Diagnostic Plots Weighted lotlength, 8818", caption = list("Residuals vs Fitted, 8818", "Normal Q-Q, 8818", "Scale-Location, 8818", "Cook's distance, 8818", "Residuals vs Leverage, 8818"))
+
+## One plot at a time
+par(mfrow=c(1,1))
+plot(WeightedRegWW, main = "Diagnostic Plots Weighted lotlength, 8818", caption = list("Residuals vs Fitted, 8818", "Normal Q-Q, 8818", "Scale-Location, 8818", "Cook's distance, 8818", "Residuals vs Leverage, 8818"))
+
+
