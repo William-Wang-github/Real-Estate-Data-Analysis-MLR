@@ -1,5 +1,5 @@
 ---
-title: "Assignment 3"
+title: "Real Estate Data Analysis MLR"
 output: html_document
 ---
 
@@ -17,7 +17,9 @@ When you click the **Knit** button a document will be generated that includes bo
 install.packages('tidyverse')
 install.packages('ggplot2')
 install.packages('GGally')
+install.packages('car')
 
+library(car)
 library(tidyverse)
 library(ggplot2)
 library(GGally)
@@ -97,37 +99,10 @@ NewCleanedRealEstDataWW[abs(rstandard(MLR9ExpVarWW))>2,]
 ## Outliers, threshold 4
 NewCleanedRealEstDataWW[abs(rstandard(MLR9ExpVarWW))>4,]
 
-
 step(MLR9ExpVarWW, direction = "backward")
 step(MLR9ExpVarWW, direction = "backward",k=log(162))
 
-
-
-install.packages('car')
-library(car)
 summary(powerTransform(cbind(list,bedrooms,bathrooms,lotwidth,lotlength,maxsqfoot,taxes,location,lotsize)))
-
-bcPower Transformations to Multinormality 
-          Est Power Rounded Pwr Wald Lwr Bnd Wald Upr Bnd
-list         0.5769        0.58          NaN          NaN
-bedrooms     0.7601        0.76          NaN          NaN
-bathrooms    0.8455        0.85       0.8248       0.8662
-lotwidth     0.0000        0.00      -0.0001       0.0001
-lotlength    0.0000        0.00      -0.0001       0.0001
-maxsqfoot    0.0814        0.08          NaN          NaN
-taxes       -0.4338       -0.43          NaN          NaN
-location    -1.0786       -1.00      -1.8589      -0.2983
-lotsize      0.0000        0.00      -0.0001       0.0001
-
-Likelihood ratio test that transformation parameters are equal to 0
- (all log transformations)
-                                      LRT df pval
-LR test, lambda = (0 0 0 0 0 0 0 0 0) NaN  9   NA
-
-Likelihood ratio test that no transformations are needed
-                                           LRT df       pval
-LR test, lambda = (1 1 1 1 1 1 1 1 1) 4355.211  9 < 2.22e-16
-
 
 par(mfrow=c(2,2)) 
 ## Diagnostic plots for lotlength
